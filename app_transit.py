@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -11,37 +10,28 @@ st.set_page_config(
     layout="wide"
 )
 
-# 2. Load Backend Machine Learning Artifacts Safely
-routes_list = [f"Route-{i}" for i in range(101, 111)]
-days_list = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-weather_list = ["Clear", "Rainy", "Overcast"]
+# 2. Hardcode Explicit Text Arrays to Ensure Clean UI Displays
+dropdown_routes = [f"Route-{i}" for i in range(101, 111)]  # Route-101 to Route-110
+dropdown_days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+dropdown_weather = ["Clear", "Rainy", "Overcast"]
 
+# 3. Load Backend Machine Learning Framework Models Safely
 with open('transit_regressor.pkl', 'rb') as f:
     reg_model = pickle.load(f)
 with open('transit_classifier.pkl', 'rb') as f:
     clf_model = pickle.load(f)
-with open('transit_encoders.pkl', 'rb') as f:
-    encoders = pickle.load(f)
 
-try:
-    dropdown_routes = encoders['route'].classes_
-    dropdown_days = encoders['day'].classes_
-    dropdown_weather = encoders['weather'].classes_
-except:
-    dropdown_routes = routes_list
-    dropdown_days = days_list
-    dropdown_weather = weather_list
-
-# 3. Main Dashboard Header
+# 4. Main Dashboard Header
 st.title("🚌 TransitPulse AI")
 st.subheader("Predictive Congestion Optimization Dashboard")
 st.write("Leveraging dual-engine Machine Learning (Regression + Random Forest Classification) to optimize urban transit schedules.")
 st.markdown("---")
 
-# 4. Interactive Input Sidebar
+# 5. Interactive Input Sidebar with Human-Readable Labels
 st.sidebar.header("📋 Journey Parameters")
 st.sidebar.write("Configure details to simulate expected rider metrics:")
 
+# Dropdowns will now strictly show words like "Route-101", "Monday", "Rainy"
 route_selection = st.sidebar.selectbox("🎯 Target Route Number", dropdown_routes)
 day_selection = st.sidebar.selectbox("📅 Day of the Week", dropdown_days)
 time_selection = st.sidebar.slider("⏰ Departure Hour (24hr clock)", 6, 22, 9)
@@ -50,17 +40,13 @@ weather_selection = st.sidebar.selectbox("🌦️ Current Weather Condition", dr
 st.sidebar.markdown("---")
 predict_clicked = st.sidebar.button("⚡ Run Predictive Inference", type="primary", use_container_width=True)
 
-# 5. Content Layout (Main Screen Container)
+# 6. Content Layout (Main Screen Execution Container)
 if predict_clicked:
-    # Feature Vector Preprocessing Under-The-Hood
-    try:
-        encoded_route = encoders['route'].transform([route_selection])[0]
-        encoded_day = encoders['day'].transform([day_selection])[0]
-        encoded_weather = encoders['weather'].transform([weather_selection])[0]
-    except:
-        encoded_route = list(dropdown_routes).index(route_selection)
-        encoded_day = list(dropdown_days).index(day_selection)
-        encoded_weather = list(dropdown_weather).index(weather_selection)
+    # Under-The-Hood Mapping: Convert text labels back to alphabetical category indices (0, 1, 2...)
+    # This precisely matches what our Scikit-Learn training arrays expect!
+    encoded_route = sorted(dropdown_routes).index(route_selection)
+    encoded_day = sorted(dropdown_days).index(day_selection)
+    encoded_weather = sorted(dropdown_weather).index(weather_selection)
     
     features = np.array([[encoded_route, encoded_day, time_selection, encoded_weather]])
     
@@ -77,16 +63,13 @@ if predict_clicked:
     with col2:
         st.metric(label="Calculated Crowd Class", value=predicted_class)
     with col3:
-        # Business logic calculation indicator based on threshold mapping
-        confidence_metric = "Optimal" if predicted_class == "Low" else "Nominal" if predicted_class == "Medium" else "Strained"
-        st.metric(label="Route Capacity Status", value=confidence_metric)
+        capacity_metric = "Optimal" if predicted_class == "Low" else "Nominal" if predicted_class == "Medium" else "Strained"
+        st.metric(label="Route Capacity Status", value=capacity_metric)
         
     st.markdown("---")
     
-    # Contextual Warning & Callouts Block Based on Classification Categories
+    # Contextual Warning & Intelligence Blocks
     st.subheader("💡 Intelligent Route Advisory")
-    
-    # Check for core rush hours
     is_rush_hour = (8 <= time_selection <= 10) or (17 <= time_selection <= 19)
     
     if predicted_class == "High":
